@@ -58,21 +58,55 @@ public class InternalCallback {
             if (reason == null) {
                 reason = "Authenticate for server login";
             }
-            d = new Dialog(new BorderLayout());
+            //failCounter = 0;
+            Preferences.set("failCounter", 0);
+            //Fingerprint.printForMe(failCounter +" ");
+          /*  d = new Dialog(new BorderLayout());
             Label icon = new Label("", "DialogBody");
             icon.getUnselectedStyle().setFgColor(0xff5722); //Sets icon color to orange
             SpanLabel lblReason = new SpanLabel(reason, "DialogBody");
             FontImage.setMaterialIcon(icon, FontImage.MATERIAL_FINGERPRINT, 7);
             d.add(BorderLayout.CENTER, BoxLayout.encloseY(icon, lblReason));
             d.showPacked(BorderLayout.CENTER, false);
+            d.setDisposeWhenPointerOutOfBounds(true);*/
+            d = new Dialog(new BorderLayout());
+            //failCounter = 0;
+            //Container xCont = new Container(new BoxLayout(BoxLayout.X_AXIS));
+            Label icon = new Label("", "DialogBody");
+            icon.setUIID("FingerprintLabel");
+            icon.getUnselectedStyle().setFgColor(0x8a4153); //Sets icon color to orange
+            FontImage.setMaterialIcon(icon, FontImage.MATERIAL_FINGERPRINT, 7);
+            Label lblPrompt = new Label("Fingerprint Sign-In");
+            lblPrompt.setUIID("LabelTitleCenter");
+            Label labelcenter = new Label("Touch the fingerprint sensor");
+            labelcenter.setUIID("LabelCenter");
+            Button btnCancel = new Button("CANCEL");
+            btnCancel.setUIID("CancelButton");
+            btnCancel.addActionListener(new ActionListener() {
+                @Override
+                public void actionPerformed(ActionEvent evt) {
+                    // failCounter = 0;
+                    Preferences.set("failCounter", 0);
+                    d.dispose();
+                    //Fingerprint.stopScan();
+                }
+            });
+            //xCont.add(icon, lblPrompt);
+            d.add(BorderLayout.CENTER, BoxLayout.encloseY(lblPrompt, icon, labelcenter));
+            d.add(BorderLayout.SOUTH, btnCancel);
+            d.showModeless();
             d.setDisposeWhenPointerOutOfBounds(true);
+
         }
+
     }
 
     public static void scanSuccess(String publicKey, String privateKey) {
         if (onSuccess != null) {
             Display.getInstance().callSerially(() -> {
                 if (d != null) {
+                    if (Display.getInstance().getPlatformName().equals("and"))
+                        Preferences.set("failCounter", 0);
                     d.dispose();
                 }
                 
@@ -85,6 +119,8 @@ public class InternalCallback {
         if (onSuccess != null) {
             Display.getInstance().callSerially(() -> {
                 if (d != null) {
+                    if (Display.getInstance().getPlatformName().equals("and"))
+                        Preferences.set("failCounter", 0);
                     d.dispose();
                 }
                 onSuccess.onSucess(null);
@@ -96,9 +132,87 @@ public class InternalCallback {
         if (onFail != null) {
             Display.getInstance().callSerially(() -> {
                 if (d != null) {
+                    if (Display.getInstance().getPlatformName().equals("and"))
+                        Preferences.set("failCounter", 0);
                     d.dispose();
                 }
                 onFail.onError(null, null, 0, null);
+            });
+        }
+    }
+
+    public static void scanFailNoError() {
+        if (onFail != null) {
+            //  failCounter = failCounter + 1;
+            Display.getInstance().callSerially(() -> {
+                if (d != null) {
+                    //   failCounter = 0;
+                    if (Display.getInstance().getPlatformName().equals("and"))
+                        Preferences.set("failCounter", 0);
+                    d.dispose();
+                }
+                //   if (Display.getInstance().getPlatformName().equals("and"))
+                //      Fingerprint.printForMe(Preferences.get("failCounter", 0) + " is failcounter");
+                onFail.onError(null, null, 0, "no error");
+            });
+        }
+    }
+
+    public static void scanFail(int errorCode, String message) {
+
+        //Fingerprint.printForMe("failCounter in scanFail start is " + Preferences.get("failCounter", 0));
+        if (onFail != null) {
+            Display.getInstance().callSerially(() -> {
+                if (Display.getInstance().getPlatformName().equals("and")) {
+                    if (d != null /*&& message.equals("failed")*/) {
+                        if (Preferences.get("failCounter", 0) == 5) {
+                            //TODO remove Log.p
+                            //Log.p("failCounter in scanFail 3rd if is " + Preferences.get("failCounter", 0));
+                            Fingerprint.stopScan();
+                            Preferences.set("failCounter", 0);
+                            d.dispose();
+                        }
+                        //    ++failCounter;
+                        int failCounter = Preferences.get("failCounter", 0);
+                        Preferences.set("failCounter", failCounter + 1);
+                        //TODO remove Log.p
+                        //Log.p("failCounter after scanFail add is " + Preferences.get("failCounter", 0));
+
+                    }
+                    // Fingerprint.printForMe("failCounter in scanFail end is " + Preferences.get("failCounter", 0));
+                    onFail.onError(null, null, errorCode, message);
+                    // failCounter = failCounter++;
+                    //  Log.p("now failCounter is " + failCounter);
+                /*if (message.equals("failed"))
+                    onFail.onError(null, null, errorCode, null);
+                else {
+                    onFail.onError(null, null, errorCode, "too many attempts");
+                }*/
+               /* if (failCounter < 4)
+                    failCounter++;*/
+                } else if (Display.getInstance().getPlatformName().equals("ios")) {
+                    if (d != null /*&& message.equals("failed")*/) {
+                        Fingerprint.stopScan();
+                        d.dispose();
+                    }
+                    onFail.onError(null, null, errorCode, message);
+                }
+            });
+        }
+    }
+
+    public static void scanFailIos(String message) {
+
+        //Fingerprint.printForMe("failCounter in scanFail start is " + Preferences.get("failCounter", 0));
+        if (onFail != null) {
+            Display.getInstance().callSerially(() -> {
+                if (Display.getInstance().getPlatformName().equals("ios")) {
+                    if (d != null /*&& message.equals("failed")*/) {
+                        //Fingerprint.stopScan();
+                        d.dispose();
+                    }
+                    onFail.onError(null, null, 100, message);
+                }
             });
         }
     }
